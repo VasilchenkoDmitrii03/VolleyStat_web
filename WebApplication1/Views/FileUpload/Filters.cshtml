@@ -1,0 +1,27 @@
+﻿@model List<WebApplication1.Models.ActionTypeFilters>
+
+@if (Model != null && Model.Any())
+{
+    <h2>Выберите фильтры</h2>
+    <form method="post" action="/FileUpload/ApplyFilters">
+        @foreach (var actionTypeFilter in Model)
+        {
+            <fieldset>
+                <legend>@actionTypeFilter.ActionType</legend>
+                @foreach (var filter in actionTypeFilter.Filters)
+                {
+                    <div>
+                        <label>@filter.Name</label>
+                        <select multiple name="@($"{actionTypeFilter.ActionType}_{filter.Name}")">
+                            @foreach (var option in filter.Options)
+                            {
+                                <option value="@option">@option</option>
+                            }
+                        </select>
+                    </div>
+                }
+            </fieldset>
+        }
+        <button type="submit">Применить</button>
+    </form>
+}

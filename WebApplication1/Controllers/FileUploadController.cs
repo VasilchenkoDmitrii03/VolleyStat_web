@@ -1,0 +1,228 @@
+﻿using Microsoft.AspNetCore.Mvc;
+using System.Data;
+using System.IO;
+using System.Collections.Generic;
+using System.Linq;
+using Newtonsoft.Json;
+using ActionsLib;
+using ActionsLib.ActionTypes;
+using WebApplication1.Models;
+using System.ComponentModel;
+using Microsoft.AspNetCore.Mvc.Razor.Infrastructure;
+namespace WebApplication1.Controllers
+{
+    public class FileUploadController : Controller
+    {
+        static Game game { get; set; }
+        public static ActionsMetricTypes AMT { get; set; }
+        public static List<ActionTypeFilters> BasicFilters = new List<ActionTypeFilters>();
+        public static List<VolleyActionType> VolleyActionTypes = new List<VolleyActionType>() { VolleyActionType.Serve, VolleyActionType.Reception, VolleyActionType.Set, VolleyActionType.Attack, VolleyActionType.Block, VolleyActionType.Defence, VolleyActionType.FreeBall, VolleyActionType.Transfer };
+        public IActionResult Index()
+        {
+            /*var filtersJson = TempData["Filters"] as string;
+            var filters = filtersJson != null
+                ? JsonConvert.DeserializeObject<List<ActionTypeFilters>>(filtersJson)
+                : new List<ActionTypeFilters>();*/
+            BaseModel model = new BaseModel();
+
+            return View(model);
+        }
+
+        [HttpPost]
+        public IActionResult UploadFile(IFormFile file)
+        {
+            if (file != null && file.Length > 0)
+            {
+                using var reader = new StreamReader(file.OpenReadStream());
+                game = Game.Load(reader);
+                AMT = game.ActionsMetricTypes;
+                BasicFilters.Clear();
+                List<ActionTypeFilters> actionTypeFiltersList = BasicFilters;
+                actionTypeFiltersList.Add(createPlayersFilter(game.Team));
+                foreach (VolleyActionType actType in AMT.Keys)
+                {
+                    ActionTypeFilters actionTypeFilters1 = new ActionTypeFilters();
+                    actionTypeFilters1.Filters = new List<Filter>();
+                    actionTypeFilters1.ActionType = actType.ToString();
+                    foreach(MetricType mType in AMT[actType])
+                    {
+                        Filter filter = new Filter();
+                        filter.Name = mType.Name;
+                        filter.Options = new List<string> (mType.AcceptableValuesNames.Values);
+                        actionTypeFilters1.Filters.Add(filter);
+                    }
+                    actionTypeFiltersList.Add(actionTypeFilters1);
+                }
+
+
+
+                // Десериализуем JSON-файл в структуру фильтров
+
+                List<TimedData> timedDatas = convertDataToTimedDataFormat(game.getVolleyActionSequence());
+                TempData["Filters"] = JsonConvert.SerializeObject(actionTypeFiltersList);
+                TempData["FilteredData"] = JsonConvert.SerializeObject(timedDatas);
+                BaseModel model = new BaseModel
+                {
+                    Filters = actionTypeFiltersList, 
+                    TimedData = timedDatas
+                };
+                return View("Index", model);
+        
+                //return RedirectToAction("Filters");
+            }
+            BaseModel model_ = new BaseModel();
+            return RedirectToAction("Index", model_);
+        }
+        private ActionTypeFilters createPlayersFilter(Team team)
+        {
+            ActionTypeFilters playerFilter = new ActionTypeFilters();
+            playerFilter.ActionType = "Player";
+            playerFilter.Filters = new List<Filter>();
+            Filter filter = new Filter();
+            filter.Name = team.Name;
+            filter.Options = new List<string>();
+            foreach (Player p in team.Players) filter.Options.Add(p.ToString());
+            playerFilter.Filters.Add(filter);
+            return playerFilter;
+        }
+        private List<TimedData> convertDataToTimedDataFormat(VolleyActionSequence sequence)
+        {
+            List<TimedData> result = new List<TimedData>();
+            foreach(ActionsLib.Action a in sequence)
+            {
+                if(a.AuthorType == ActionAuthorType.Player) result.Add(new TimedData((PlayerAction)a));
+            }
+            return result;
+        }
+
+        public IActionResult Filters()
+        {
+            var filtersJson = TempData["Filters"] as string;
+            if (filtersJson != null)
+            {
+                var filters = JsonConvert.DeserializeObject<List<ActionTypeFilters>>(filtersJson);
+                return View(filters);
+            }
+            BaseModel model = new BaseModel();
+            return RedirectToAction("Index", model);
+        }
+
+        [HttpPost]
+        public IActionResult ApplyFilters(IFormCollection form)
+        {
+            var selectedFilters = new Dictionary<string, List<string>>();
+
+            foreach (var key in form.Keys)
+            {
+                var selectedValues = form[key].ToList();
+                if (selectedValues.Any())
+                {
+                    selectedFilters[key] = selectedValues;
+                }
+            }
+            TempData["FilteredData"] = selectedFilters;
+            BaseModel model = new BaseModel();
+            model.Filters = BasicFilters;
+            
+            return View("FilteredResults", selectedFilters);
+        }
+        [HttpPost]
+        public IActionResult UseFilters(IFormCollection form)
+        {
+            BaseModel model = new BaseModel();
+            var selectedFilters = new Dictionary<string, List<string>>();
+
+            foreach (var key in form.Keys)
+            {
+                var selectedValues = form[key].ToList();
+                if (selectedValues.Any())
+                {
+                    selectedFilters[key] = selectedValues;
+                }
+            }
+            Dictionary<VolleyActionType, Dictionary<MetricType, List<string>>> data = reconvertData(selectedFilters);
+            updateFiltersHolder(data);
+            updatePlayerFilter(selectedFilters);
+            model.Filters = BasicFilters;
+            VolleyActionSequence seq = PlayerFilter.ProcessSequence(ActualFilters.ProcessSequence(game.getVolleyActionSequence()));
+            model.TimedData = convertDataToTimedDataFormat(seq);
+            return View("Index", model);
+        }
+
+        FiltersHolder ActualFilters;
+        PlayersFiltersHolder PlayerFilter;
+
+        private Dictionary<VolleyActionType, Dictionary<MetricType, List<string>>> reconvertData(Dictionary<string, List<string>> data)
+        {
+            Dictionary<VolleyActionType, Dictionary<MetricType, List<string>>> result = new Dictionary<VolleyActionType, Dictionary<MetricType, List<string>>>();
+            List<string> selectedActionTypes = new List<string>();
+            foreach(var actionType in data.Keys)
+            {
+                string[] tmp = actionType.Split('$');
+                if (tmp[0] == "CheckBox") selectedActionTypes.Add(tmp[1]);
+            }
+
+            foreach(string actionType in selectedActionTypes)
+            {
+                VolleyActionType type = convert(actionType);
+                result.Add(type, new Dictionary<MetricType, List<string>>());
+                
+                foreach (var key in data.Keys)
+                {
+                    string[] tmp = key.Split('$');
+                    if (tmp[0] == "ComboBox" && tmp[1] == actionType)
+                    {
+                        result[type].Add(AMT.getByName(type, tmp[2]), data[key]);
+                    }
+                }
+            }
+            return result;
+        }
+        private void updatePlayerFilter(Dictionary<string, List<string>> data) {
+            foreach(string key in data.Keys)
+            {
+                string[] tmp = key.Split('$');
+                if (tmp[0] == "ComboBox" && tmp[1] == "Player")
+                {
+                    PlayerFilter = new PlayersFiltersHolder(game.Team);
+                    List<string> numbers = new List<string>();
+                    foreach (string str in data[key])
+                    {
+                        numbers.Add(str.Substring(1));
+                    }
+                    PlayerFilter.update(numbers);
+                }
+            }
+        
+        }
+        private void updateFiltersHolder(Dictionary<VolleyActionType, Dictionary<MetricType, List<string>>> data)
+        {
+            ActualFilters = new FiltersHolder(AMT);
+            foreach(VolleyActionType actionType in data.Keys)
+            {
+                foreach(MetricType metricType in data[actionType].Keys)
+                {
+                    ActualFilters.update(actionType, metricType, data[actionType][metricType]);
+                }
+            }
+        }
+        private VolleyActionType convert(string str)
+        {
+            foreach(VolleyActionType act in VolleyActionTypes)
+            {
+                if(act.ToString() == str) return act;
+            }
+            return VolleyActionType.Defence;
+        }
+        
+        private void updateFilters(Dictionary<string, List<string>> textFilters)
+        {
+
+        }
+        
+    }
+
+
+
+
+}
