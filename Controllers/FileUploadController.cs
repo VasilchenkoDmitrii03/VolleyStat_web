@@ -62,7 +62,7 @@ namespace WebApplication1.Controllers
                     // Десериализуем JSON-файл в структуру фильтров
 
                     //List<TimedData> timedDatas = convertDataToTimedDataFormat(game.getVolleyActionSequence());
-                    TempData["Filters"] = JsonConvert.SerializeObject(actionTypeFiltersList);
+                    //TempData["Filters"] = JsonConvert.SerializeObject(actionTypeFiltersList);
                    // TempData["FilteredData"] = JsonConvert.SerializeObject(timedDatas);
                     BaseModel model = new BaseModel
                     {
