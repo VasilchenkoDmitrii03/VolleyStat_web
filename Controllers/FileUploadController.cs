@@ -20,10 +20,6 @@ namespace WebApplication1.Controllers
         public static List<VolleyActionType> VolleyActionTypes = new List<VolleyActionType>() { VolleyActionType.Serve, VolleyActionType.Reception, VolleyActionType.Set, VolleyActionType.Attack, VolleyActionType.Block, VolleyActionType.Defence, VolleyActionType.FreeBall, VolleyActionType.Transfer };
         public IActionResult Index()
         {
-            /*var filtersJson = TempData["Filters"] as string;
-            var filters = filtersJson != null
-                ? JsonConvert.DeserializeObject<List<ActionTypeFilters>>(filtersJson)
-                : new List<ActionTypeFilters>();*/
             BaseModel model = new BaseModel();
 
             return View(model);
@@ -37,8 +33,7 @@ namespace WebApplication1.Controllers
                 if (file != null && file.Length > 0)
                 {
                     using var reader = new StreamReader(file.OpenReadStream());
-                    game = Game.Load(reader);
-                    AMT = game.ActionsMetricTypes;
+                    
                     BasicFilters.Clear();
                     List<ActionTypeFilters> actionTypeFiltersList = BasicFilters;
                     actionTypeFiltersList.Add(createPlayersFilter(game.Team));
@@ -97,7 +92,7 @@ namespace WebApplication1.Controllers
             List<TimedData> result = new List<TimedData>();
             foreach(ActionsLib.Action a in sequence)
             {
-                if(a.AuthorType == ActionAuthorType.Player) result.Add(new TimedData((PlayerAction)a));
+                if(a.AuthorType == ActionAuthorType.Player) result.Add(new TimedData((PlayerAction)a, AMT));
             }
             return result;
         }

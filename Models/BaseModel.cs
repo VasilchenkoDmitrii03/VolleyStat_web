@@ -6,7 +6,7 @@ namespace WebApplication1.Models
     {
         public List<ActionTypeFilters> Filters { get; set; } = new List<ActionTypeFilters>();
         public List<TimedData> TimedData { get; set; } = new List<TimedData> { };
-
+        public string YoutubeURL { get; set; } = "";
     
     }
 }

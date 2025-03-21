@@ -1,4 +1,5 @@
 ﻿using ActionsLib;
+using ActionsLib.ActionTypes;
 using ActionsLib.TextRepresentation;
 namespace WebApplication1.Models
 {
@@ -7,9 +8,9 @@ namespace WebApplication1.Models
         
         public string Description { get; set; }  // Строковое описание
         public double TimeCode { get; set; }     // Таймкод, например, время в секундах или минутах
-        public TimedData(PlayerAction p)
+        public TimedData(PlayerAction p, ActionsMetricTypes AMT)
         {
-            PlayerActionTextRepresentation textRepr = new PlayerActionTextRepresentation(p.VolleyActionType, WebApplication1.Controllers.FileUploadController.AMT[p.VolleyActionType]);
+            PlayerActionTextRepresentation textRepr = new PlayerActionTextRepresentation(p.VolleyActionType, AMT[p.VolleyActionType]);
             textRepr.SetPlayer(p.Player);
             foreach(MetricType m in p.MetricTypes)
             {

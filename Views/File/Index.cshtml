@@ -1,0 +1,38 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Фильтрация данных</title>
+</head>
+<body>
+    <h2>Загрузите JSON-файл с фильтрами</h2>
+    <hr>
+
+    <!-- Ссылка на страницу добавления файла -->
+    <h3><a href="/File/UploadFile">Добавить новый файл</a></h3>
+
+    <hr>
+
+    <!-- Отображаем список загруженных файлов -->
+    <h3>Существующие файлы:</h3>
+    <ul>
+        @foreach (var file in Model)
+        {
+            <li>
+                <strong>@file.FileName</strong><br />
+                Описание: @file.Description<br />
+                Загружен: @file.DateUploaded.ToString("dd.MM.yyyy HH:mm")<br />
+                Загружено пользователем: @file.UploadedBy<br />
+                <a href="@Url.Action("GamePage", "GameViewer", new { gameName = file.FileName })">
+                    <button>Перейти к игре</button>
+                </a>
+            </li>
+        }
+    </ul>
+
+    <hr>
+
+  
+</body>
+</html>
