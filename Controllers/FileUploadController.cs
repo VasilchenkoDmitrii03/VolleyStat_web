@@ -9,6 +9,7 @@ using ActionsLib.ActionTypes;
 using WebApplication1.Models;
 using System.ComponentModel;
 using Microsoft.AspNetCore.Mvc.Razor.Infrastructure;
+using System.Reflection;
 namespace WebApplication1.Controllers
 {
     public class FileUploadController : Controller
@@ -31,47 +32,53 @@ namespace WebApplication1.Controllers
         [HttpPost]
         public IActionResult UploadFile(IFormFile file)
         {
-            if (file != null && file.Length > 0)
+            try
             {
-                using var reader = new StreamReader(file.OpenReadStream());
-                game = Game.Load(reader);
-                AMT = game.ActionsMetricTypes;
-                BasicFilters.Clear();
-                List<ActionTypeFilters> actionTypeFiltersList = BasicFilters;
-                actionTypeFiltersList.Add(createPlayersFilter(game.Team));
-                foreach (VolleyActionType actType in AMT.Keys)
+                if (file != null && file.Length > 0)
                 {
-                    ActionTypeFilters actionTypeFilters1 = new ActionTypeFilters();
-                    actionTypeFilters1.Filters = new List<Filter>();
-                    actionTypeFilters1.ActionType = actType.ToString();
-                    foreach(MetricType mType in AMT[actType])
+                    using var reader = new StreamReader(file.OpenReadStream());
+                    game = Game.Load(reader);
+                    AMT = game.ActionsMetricTypes;
+                    BasicFilters.Clear();
+                    List<ActionTypeFilters> actionTypeFiltersList = BasicFilters;
+                    actionTypeFiltersList.Add(createPlayersFilter(game.Team));
+                    foreach (VolleyActionType actType in AMT.Keys)
                     {
-                        Filter filter = new Filter();
-                        filter.Name = mType.Name;
-                        filter.Options = new List<string> (mType.AcceptableValuesNames.Values);
-                        actionTypeFilters1.Filters.Add(filter);
+                        ActionTypeFilters actionTypeFilters1 = new ActionTypeFilters();
+                        actionTypeFilters1.Filters = new List<Filter>();
+                        actionTypeFilters1.ActionType = actType.ToString();
+                        foreach (MetricType mType in AMT[actType])
+                        {
+                            Filter filter = new Filter();
+                            filter.Name = mType.Name;
+                            filter.Options = new List<string>(mType.AcceptableValuesNames.Values);
+                            actionTypeFilters1.Filters.Add(filter);
+                        }
+                        actionTypeFiltersList.Add(actionTypeFilters1);
                     }
-                    actionTypeFiltersList.Add(actionTypeFilters1);
+
+
+
+                    // Десериализуем JSON-файл в структуру фильтров
+
+                    List<TimedData> timedDatas = convertDataToTimedDataFormat(game.getVolleyActionSequence());
+                    TempData["Filters"] = JsonConvert.SerializeObject(actionTypeFiltersList);
+                    TempData["FilteredData"] = JsonConvert.SerializeObject(timedDatas);
+                    BaseModel model = new BaseModel
+                    {
+                        Filters = actionTypeFiltersList,
+                        TimedData = timedDatas
+                    };
+                    return View("Index", model);
                 }
-
-
-
-                // Десериализуем JSON-файл в структуру фильтров
-
-                List<TimedData> timedDatas = convertDataToTimedDataFormat(game.getVolleyActionSequence());
-                TempData["Filters"] = JsonConvert.SerializeObject(actionTypeFiltersList);
-                TempData["FilteredData"] = JsonConvert.SerializeObject(timedDatas);
-                BaseModel model = new BaseModel
-                {
-                    Filters = actionTypeFiltersList, 
-                    TimedData = timedDatas
-                };
-                return View("Index", model);
-        
-                //return RedirectToAction("Filters");
+                return RedirectToAction("Index", new BaseModel());
             }
-            BaseModel model_ = new BaseModel();
-            return RedirectToAction("Index", model_);
+            catch
+            {
+                BaseModel model_ = new BaseModel();
+                return RedirectToAction("Index", model_);
+            }
+            
         }
         private ActionTypeFilters createPlayersFilter(Team team)
         {
