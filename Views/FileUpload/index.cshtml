@@ -200,12 +200,16 @@
         <h3>Результаты</h3>
         <div class="listbox" id="filteredItems">
             <p>Здесь будут отображаться результаты</p>
-            <ul>
-                @foreach (var item in Model.TimedData)
-                {
-                    <li data-timestamp="@item.TimeCode" class="timed-item">@item.Description - @item.TimeCode</li> <!-- Выводим описание и таймкод -->
-                }
-            </ul>
+            @if(Model != null && Model.TimedData != null)
+            {
+                <ul>
+                    @foreach (var item in Model.TimedData)
+                    {
+                        <li data-timestamp="@item.TimeCode" class="timed-item">@item.Description - @item.TimeCode</li> <!-- Выводим описание и таймкод -->
+                    }
+                </ul>
+            }
+            
         </div>
         <!-- Вывод выбранного таймкода -->
         <div id="selectedTimeCode">

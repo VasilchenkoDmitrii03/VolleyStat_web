@@ -13,7 +13,7 @@ namespace WebApplication1.Controllers
 {
     public class FileUploadController : Controller
     {
-        static Game game { get; set; } = new Game(new List<int>(), AMT, new Team());
+        static Game game { get; set; } = new Game(new List<int>(), new ActionsMetricTypes("test"), new Team());
         public static ActionsMetricTypes AMT { get; set; } = new ActionsMetricTypes("empty");
         public static List<ActionTypeFilters> BasicFilters = new List<ActionTypeFilters>();
         public static List<VolleyActionType> VolleyActionTypes = new List<VolleyActionType>() { VolleyActionType.Serve, VolleyActionType.Reception, VolleyActionType.Set, VolleyActionType.Attack, VolleyActionType.Block, VolleyActionType.Defence, VolleyActionType.FreeBall, VolleyActionType.Transfer };
@@ -116,7 +116,8 @@ namespace WebApplication1.Controllers
 
             foreach (var key in form.Keys)
             {
-                List<string> selectedValues = form[key].ToList();
+                List<string> selectedValues = new List<string>();
+                for (int i = 0; i < form[key].Count; i++) if(form[key][i] != null) selectedValues.Add(form[key][i]);
                 if (selectedValues.Any())
                 {
                     if(selectedValues != null) selectedFilters[key] = selectedValues;
@@ -134,7 +135,7 @@ namespace WebApplication1.Controllers
             return View("Index", model);
         }
 
-        FiltersHolder ActualFilters;
+        FiltersHolder ActualFilters = new FiltersHolder();
         PlayersFiltersHolder PlayerFilter = new PlayersFiltersHolder(new Team());
 
         private Dictionary<VolleyActionType, Dictionary<MetricType, List<string>>> reconvertData(Dictionary<string, List<string>> data)
