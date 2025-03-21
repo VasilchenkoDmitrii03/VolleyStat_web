@@ -150,7 +150,7 @@ namespace WebApplication1.Controllers
         }
 
         FiltersHolder ActualFilters;
-        PlayersFiltersHolder PlayerFilter;
+        PlayersFiltersHolder PlayerFilter = new PlayersFiltersHolder(new Team());
 
         private Dictionary<VolleyActionType, Dictionary<MetricType, List<string>>> reconvertData(Dictionary<string, List<string>> data)
         {
