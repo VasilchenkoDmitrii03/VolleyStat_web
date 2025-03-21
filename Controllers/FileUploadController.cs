@@ -13,8 +13,8 @@ namespace WebApplication1.Controllers
 {
     public class FileUploadController : Controller
     {
-        static Game game { get; set; }
-        public static ActionsMetricTypes AMT { get; set; }
+        static Game game { get; set; } = new Game(new List<int>(), AMT, new Team());
+        public static ActionsMetricTypes AMT { get; set; } = new ActionsMetricTypes("empty");
         public static List<ActionTypeFilters> BasicFilters = new List<ActionTypeFilters>();
         public static List<VolleyActionType> VolleyActionTypes = new List<VolleyActionType>() { VolleyActionType.Serve, VolleyActionType.Reception, VolleyActionType.Set, VolleyActionType.Attack, VolleyActionType.Block, VolleyActionType.Defence, VolleyActionType.FreeBall, VolleyActionType.Transfer };
         public IActionResult Index()
@@ -108,44 +108,29 @@ namespace WebApplication1.Controllers
         }
 
         [HttpPost]
-        public IActionResult ApplyFilters(IFormCollection form)
-        {
-            var selectedFilters = new Dictionary<string, List<string>>();
-
-            foreach (var key in form.Keys)
-            {
-                var selectedValues = form[key].ToList();
-                if (selectedValues.Any())
-                {
-                    selectedFilters[key] = selectedValues;
-                }
-            }
-            TempData["FilteredData"] = selectedFilters;
-            BaseModel model = new BaseModel();
-            model.Filters = BasicFilters;
-            
-            return View("FilteredResults", selectedFilters);
-        }
-        [HttpPost]
         public IActionResult UseFilters(IFormCollection form)
         {
             BaseModel model = new BaseModel();
+            if (form == null) return View("Index", model);
             var selectedFilters = new Dictionary<string, List<string>>();
 
             foreach (var key in form.Keys)
             {
-                var selectedValues = form[key].ToList();
+                List<string> selectedValues = form[key].ToList();
                 if (selectedValues.Any())
                 {
-                    selectedFilters[key] = selectedValues;
+                    if(selectedValues != null) selectedFilters[key] = selectedValues;
                 }
             }
-            Dictionary<VolleyActionType, Dictionary<MetricType, List<string>>> data = reconvertData(selectedFilters);
-            updateFiltersHolder(data);
-            updatePlayerFilter(selectedFilters);
-            model.Filters = BasicFilters;
-            VolleyActionSequence seq = PlayerFilter.ProcessSequence(ActualFilters.ProcessSequence(game.getVolleyActionSequence()));
-            model.TimedData = convertDataToTimedDataFormat(seq);
+            if(ActualFilters != null && PlayerFilter != null)
+            {
+                Dictionary<VolleyActionType, Dictionary<MetricType, List<string>>> data = reconvertData(selectedFilters);
+                updateFiltersHolder(data);
+                updatePlayerFilter(selectedFilters);
+                model.Filters = BasicFilters;
+                VolleyActionSequence seq = PlayerFilter.ProcessSequence(ActualFilters.ProcessSequence(game.getVolleyActionSequence()));
+                model.TimedData = convertDataToTimedDataFormat(seq);
+            }
             return View("Index", model);
         }
 
@@ -215,10 +200,6 @@ namespace WebApplication1.Controllers
             return VolleyActionType.Defence;
         }
         
-        private void updateFilters(Dictionary<string, List<string>> textFilters)
-        {
-
-        }
         
     }
 
