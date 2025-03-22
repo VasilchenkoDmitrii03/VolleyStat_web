@@ -18,6 +18,8 @@ namespace WebApplication1.Controllers
         [HttpGet]
         public IActionResult UploadFile()
         {
+            //_context.Database.EnsureDeleted();
+            //_context.Database.Migrate();
             return View();
         }
 

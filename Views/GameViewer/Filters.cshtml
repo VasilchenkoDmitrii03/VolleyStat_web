@@ -8,26 +8,47 @@
 <style>
     .container {
         display: flex;
-        gap: 20px; /* Отступ между колонками */
+        gap: 20px;
+        align-items: flex-start;
+        margin: 0 auto;
     }
 
     .filters {
-        flex: 2; /* Занимает 2 части из 3 */
+        flex: 1;
+    }
+
+    .filters, .sidebar {
+        padding: 10px;
+        margin: 0;
     }
 
     .sidebar {
-        flex: 1; /* Занимает 1 часть из 3 */
+        flex: 2;
         display: flex;
         flex-direction: column;
         align-items: center;
+        justify-content: space-between;
         gap: 20px;
-        width: 100%;
     }
 
     iframe {
-        width: 300px; /* YouTube плеер будет занимать 100% доступной ширины */
-        height: 200px; /* Можно подкорректировать высоту по желанию */
+        width: 100%;
+        height: 100%;
+        min-height: 400px;
+        aspect-ratio: 16 / 9;
     }
+
+    .video-container {
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+        position: relative;
+    }
+
+        .video-container iframe {
+            width: 100%;
+            height: auto;
+        }
 
     .listbox {
         width: 100%;
@@ -38,7 +59,6 @@
         text-align: center;
     }
 
-    /* Стили для таблицы */
     table {
         width: 100%;
         border-collapse: collapse;
@@ -55,7 +75,6 @@
         background-color: #f4f4f4;
     }
 
-    /* Стили для multi-select (многострочного выбора) */
     .multi-select {
         width: 100%;
         height: auto;
@@ -114,20 +133,37 @@
             background-color: #f1f1f1;
         }
 
-    /* Убираем ограничение по высоте */
     .dropdown-content {
-        max-height: none; /* Убираем ограничение по высоте */
+        max-height: none;
     }
 
-    /* Можно добавить отступы, если потребуется */
     .dropdown-content {
         padding: 5px;
     }
+
+    .apply-button {
+        margin-top: 20px;
+        padding: 10px 20px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+        .apply-button:hover {
+            background-color: #0056b3;
+        }
+
+    /* Новый стиль для выделения выбранного таймкода */
+    .selected {
+        background-color: #007bff;
+        color: white;
+        font-weight: bold;
+    }
 </style>
 
-
 <div class="container">
-    <!-- Левая часть: Фильтры -->
     <div class="filters">
         @if (Model != null)
         {
@@ -161,7 +197,6 @@
                                                 <span>&#x25BC;</span>
                                             </div>
                                             <div class="dropdown-content">
-
                                                 <select multiple class="multi-select" name="@($"ComboBox${actionTypeFilter.ActionType}${filter.Name}")">
                                                     @for (int i = 0; i < filter.Options.Count; i++)
                                                     {
@@ -176,19 +211,19 @@
                         </tbody>
                     </table>
                 }
-                <button type="submit">Apply</button>
+                <button type="submit" class="apply-button">Применить фильтры</button>
             </form>
         }
     </div>
 
-    <!-- Правая часть: YouTube-плеер и ListBox -->
     <div class="sidebar">
         <h3>Видео</h3>
-        <iframe id="youtube-player"
-                src="https://www.youtube.com/embed/@videoId"
-                frameborder="0" allowfullscreen>
-        </iframe>
-
+        <div class="video-container">
+            <iframe id="youtube-player"
+                    src="https://www.youtube.com/embed/@videoId?enablejsapi=1"
+                    frameborder="0" allowfullscreen>
+            </iframe>
+        </div>
         <h3>Результаты</h3>
         <div class="listbox" id="filteredItems">
             <p>Здесь будут отображаться результаты</p>
@@ -197,27 +232,28 @@
                 <ul>
                     @foreach (var item in Model.TimedData)
                     {
-                        <li data-timestamp="@item.TimeCode" class="timed-item">@item.Description - @item.TimeCode</li> <!-- Выводим описание и таймкод -->
+                        <li data-timestamp="@item.TimeCode" class="timed-item">@item.Description - @item.TimeCode</li>
                     }
                 </ul>
             }
-
-        </div>
-        <!-- Вывод выбранного таймкода -->
-        <div id="selectedTimeCode">
-            <h3>Выбранный таймкод:</h3>
-            <p id="timeCodeDisplay">Нет выбранного таймкода</p>
         </div>
     </div>
 </div>
 
 <script>
-    <script>
-        // Инициализация YouTube API (если не подключена)
-        var player;
+    var player;
+    var timedItems = document.querySelectorAll('.timed-item');
+    var timeCodes = Array.from(timedItems).map(item => parseFloat(item.getAttribute('data-timestamp')));
+    var currentIndex = 0;
+
+    function loadYouTubeAPI() {
+        var tag = document.createElement("script");
+        tag.src = "https://www.youtube.com/iframe_api";
+        var firstScriptTag = document.getElementsByTagName("script")[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    }
 
     function onYouTubeIframeAPIReady() {
-        // Создаем плеер с использованием YouTube API
         player = new YT.Player('youtube-player', {
             events: {
                 'onReady': onPlayerReady
@@ -226,14 +262,91 @@
     }
 
     function onPlayerReady(event) {
-        console.log("Player is ready");
+        console.log("YouTube Player is ready");
+
+        timedItems.forEach(function (item) {
+            item.addEventListener('click', function () {
+                var timeCode = parseFloat(item.getAttribute('data-timestamp'));
+                player.seekTo(timeCode, true);
+
+                // Снимаем класс 'selected' с всех элементов
+                timedItems.forEach(function (timedItem) {
+                    timedItem.classList.remove('selected');
+                });
+
+                // Добавляем класс 'selected' к текущему элементу
+                item.classList.add('selected');
+            });
+        });
     }
 
-    // Загружаем YouTube API (вставляем скрипт на страницу)
-    var tag = document.createElement("script");
-    tag.src = "https://www.youtube.com/embed/@videoId";
-    var firstScriptTag = document.getElementsByTagName("script")[0];
-    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    loadYouTubeAPI();
+
+    // Переключение между таймкодами с помощью клавиш
+    document.addEventListener('keydown', function (event) {
+        if (event.ctrlKey && event.shiftKey && event.key === 'ArrowRight') {
+            // Следующий таймкод
+            currentIndex = (currentIndex + 1) % timeCodes.length;
+            var nextTimeCode = timeCodes[currentIndex];
+            if (player) {
+                player.seekTo(nextTimeCode - 4, true);
+            }
+
+            // Обновляем визуально выделенный таймкод
+            var selectedItem = Array.from(timedItems).find(item => parseFloat(item.getAttribute('data-timestamp')) === nextTimeCode);
+
+            // Снимаем класс 'selected' с всех элементов
+            timedItems.forEach(function (timedItem) {
+                timedItem.classList.remove('selected');
+            });
+
+            // Добавляем класс 'selected' к текущему элементу
+            if (selectedItem) {
+                selectedItem.classList.add('selected');
+                scrollIntoView(selectedItem);
+            }
+        } else if (event.ctrlKey && event.shiftKey && event.key === 'ArrowLeft') {
+            // Предыдущий таймкод
+            currentIndex = (currentIndex - 1 + timeCodes.length) % timeCodes.length;
+            var prevTimeCode = timeCodes[currentIndex];
+            if (player) {
+                player.seekTo(prevTimeCode - 4, true);
+            }
+
+            // Обновляем визуально выделенный таймкод
+            var selectedItem = Array.from(timedItems).find(item => parseFloat(item.getAttribute('data-timestamp')) === prevTimeCode);
+
+            // Снимаем класс 'selected' с всех элементов
+            timedItems.forEach(function (timedItem) {
+                timedItem.classList.remove('selected');
+            });
+
+            // Добавляем класс 'selected' к текущему элементу
+            if (selectedItem) {
+                selectedItem.classList.add('selected');
+                scrollIntoView(selectedItem);
+            }
+        }
+        else if (event.ctrlKey && event.shiftKey && event.key === 'ArrowUp') {
+            var prevTimeCode = timeCodes[currentIndex];
+            if (player) {
+                player.seekTo(prevTimeCode - 4, true);
+            }
+        }
+    });
+
+    function scrollIntoView(item) {
+        // Прокручиваем listbox так, чтобы выбранный элемент был видим
+        const listbox = document.getElementById('filteredItems');
+        const rect = item.getBoundingClientRect();
+        const listboxRect = listbox.getBoundingClientRect();
+
+        if (rect.top < listboxRect.top) {
+            listbox.scrollTop -= (listboxRect.top - rect.top);
+        } else if (rect.bottom > listboxRect.bottom) {
+            listbox.scrollTop += (rect.bottom - listboxRect.bottom);
+        }
+    }
 
     // Добавляем обработчик кликов для открытия/закрытия выпадающего списка
     const dropdownHeaders = document.querySelectorAll('.dropdown-header');
@@ -258,26 +371,4 @@
             }
         });
     });
-
-    // Добавляем обработчик кликов для элементов списка с таймкодами
-    document.querySelectorAll('.timed-item').forEach(function (item) {
-        item.addEventListener('click', function () {
-            // Получаем таймкод из data-атрибута элемента списка
-            var timeCode = parseFloat(item.getAttribute('data-timestamp'));
-
-            // Проверяем, что мы получили правильный таймкод
-            console.log("Selected timecode: ", timeCode);
-
-            // Отображаем выбранный таймкод в текстовом элементе
-            document.getElementById('timeCodeDisplay').textContent = `Выбранный таймкод: ${timeCode}s`;
-
-            // Перемещаем плеер на выбранный таймкод (если плеер инициализирован)
-            if (player) {
-                player.seekTo(timeCode, true); // Перематываем плеер на указанный таймкод
-            }
-        });
-    });
 </script>
-
-</script>
-

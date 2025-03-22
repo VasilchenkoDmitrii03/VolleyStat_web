@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using WebApplication1.Models;
 using ActionsLib;
 using ActionsLib.ActionTypes;
+using System.Text.RegularExpressions;
 
 namespace WebApplication1.Controllers
 {
@@ -37,7 +38,7 @@ namespace WebApplication1.Controllers
             HttpContext.Session.SetString("gameName", gameName);
             LoadData(gameName);
                 List<TimedData> timedDatas = convertDataToTimedDataFormat(game.getVolleyActionSequence());
-            string substr = game.URL.Substring(game.URL.IndexOf("?v=") + 3);
+            string substr = GetYouTubeVideoID(game.URL);
             BaseModel model = new BaseModel
             {
                 Filters = BasicFilters,
@@ -46,6 +47,21 @@ namespace WebApplication1.Controllers
             };
                 return View("Filters", model);
 
+        }
+        private string GetYouTubeVideoID(string url)
+        {
+            // Регулярное выражение для поиска ID видео по разным форматам URL
+            string pattern = @"(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})";
+
+            Regex regex = new Regex(pattern);
+            Match match = regex.Match(url);
+
+            if (match.Success)
+            {
+                return match.Groups[1].Value;
+            }
+
+            return null;
         }
         private void LoadData(string gameName)
         {
@@ -123,7 +139,7 @@ namespace WebApplication1.Controllers
                 model.Filters = BasicFilters;
                 VolleyActionSequence seq = PlayerFilter.ProcessSequence(ActualFilters.ProcessSequence(game.getVolleyActionSequence()));
                 model.TimedData = convertDataToTimedDataFormat(seq);
-                model.YoutubeURL =  game.URL.Substring(game.URL.IndexOf("?v=") + 3);
+                model.YoutubeURL = GetYouTubeVideoID(game.URL);
             }
             return View("Filters", model);
         }
