@@ -211,7 +211,7 @@
                         </tbody>
                     </table>
                 }
-                <button type="submit" class="apply-button">Применить фильтры</button>
+                <button type="submit" class="apply-button" id="applyFiltersButton">Применить фильтры</button>
             </form>
         }
     </div>
@@ -332,6 +332,11 @@
             if (player) {
                 player.seekTo(prevTimeCode - 4, true);
             }
+        }
+        else if (event.ctrlKey && event.shiftKey && event.key === 'Enter') {
+            event.preventDefault();  // Предотвращаем стандартное поведение
+            // Имитируем клик по кнопке "Применить фильтры"
+            document.getElementById('applyFiltersButton').click();
         }
     });
 
