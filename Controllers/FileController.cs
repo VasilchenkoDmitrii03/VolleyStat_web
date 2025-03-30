@@ -24,47 +24,7 @@ namespace WebApplication1.Controllers
         }
 
         // Обработка загрузки файла
-        [HttpPost]
-        public IActionResult UploadFile(IFormFile file, string description, string team)
-        {
-            if (file == null || file.Length == 0)
-            {
-                ModelState.AddModelError("file", "Выберите файл для загрузки.");
-                return View();
-            }
 
-            // Создаём папку для хранения файлов, если её ещё нет
-            if (!Directory.Exists(_uploadsFolder))
-            {
-                Directory.CreateDirectory(_uploadsFolder);
-            }
-
-            // Генерируем уникальное имя для файла
-            var fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
-            var filePath = Path.Combine(_uploadsFolder, fileName);
-
-            // Сохраняем файл на сервере
-            using (var stream = new FileStream(filePath, FileMode.Create))
-            {
-                file.CopyTo(stream);
-            }
-
-            // Сохраняем метаданные файла в базе данных
-            var fileMetadata = new FileMetadata
-            {
-                FileName = file.FileName,
-                FilePath = filePath,
-                Description = description,
-                DateUploaded = DateTime.UtcNow,
-                UploadedBy = User.Identity.Name ?? "Anonymous", // Имя пользователя, если есть
-                Team = team
-            };
-
-            _context.Files.Add(fileMetadata);
-            _context.SaveChanges();
-
-            return RedirectToAction("Index", "Home"); // Перенаправляем на главную страницу или страницу с файлами
-        }
         // Страница отображения всех файлов
         [HttpGet]
         public async Task<IActionResult> Index()
